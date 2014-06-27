@@ -206,6 +206,8 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 	 * @param string $s String
 	 */
 	protected function parseBBCode(&$s) {
+		// TODO :(.*?) may or may not occur: \[url=(.+):(.+)\] (not finished yet!)
+		// TODO first remove :.* globally at the end of the tag to facilitate other regex?
 		$s = html_entity_decode ( $s );
 
 		$s = preg_replace ( '/\[b:(.*?)\]/', '[b]', $s );
@@ -218,10 +220,11 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 		$s = preg_replace ( '/\[\/u:(.*?)\]/', '[/u]', $s );
 
 		$s = preg_replace ( '/\[quote:(.*?)\]/', '[quote]', $s );
-		$s = preg_replace ( '/\[quote(:(.*?))?="(.*?)"\]/', '[b]\\3[/b]\n[quote]', $s );
+		$s = preg_replace ( '/\[quote="(.*?)"(:(.*?))?\]/', '[quote="\\1"]', $s );
 		$s = preg_replace ( '/\[\/quote:(.*?)\]/', '[/quote]', $s );
 
-		$s = preg_replace ( '/\[img:(.*?)\](.*?)\[\/img:(.*?)\]/si', '[img]\\2[/img]', $s );
+		$s = preg_replace ( '/\[img:(.*?)\]/', '[img]', $s );
+		$s = preg_replace ( '/[\/img:(.*?)\]/', '[/img]', $s );
 
 		$s = preg_replace ( '/\[color=(.*?):(.*?)\]/', '[color=\\1]', $s );
 		$s = preg_replace ( '/\[\/color:(.*?)\]/', '[/color]', $s );
@@ -234,13 +237,14 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 		$s = preg_replace ( '/\[size=(2[3-9])[0-9]:(.*?)\]/', '[size=6]', $s );
 		$s = preg_replace ( '/\[\/size:(.*?)\]/', '[/size]', $s );
 
-		$s = preg_replace ( '/\[code:(.*?)]/', '[code]', $s );
-		$s = preg_replace ( '/\[\/code:(.*?)]/', '[/code]', $s );
+		$s = preg_replace ( '/\[code:(.*?)\]/', '[code]', $s );
+		$s = preg_replace ( '/\[code=([a-z]+):(.*?)\]/', '[code type="\\1"]', $s );
+		$s = preg_replace ( '/\[\/code:(.*?)\]/', '[/code]', $s );
 
-		$s = preg_replace ( '/\[list(:(.*?))?\]/', '[ul]', $s );
-		$s = preg_replace ( '/\[list=([a1]):(.*?)\]/', '[ol]', $s );
-		$s = preg_replace ( '/\[\/list:u:(.*?)\]/', '[/ul]', $s );
-		$s = preg_replace ( '/\[\/list:o:(.*?)\]/', '[/ol]', $s );
+		$s = preg_replace ( '/\[list(:(.*?))?\]/', '[list]', $s );
+		$s = preg_replace ( '/\[list=([a1]):(.*?)\]/', '[list=\\1]', $s );
+		$s = preg_replace ( '/\[\/list:u:(.*?)\]/', '[/list]', $s );
+		$s = preg_replace ( '/\[\/list:o:(.*?)\]/', '[/list]', $s );
 
 		$s = preg_replace ( '/\[\*:(.*?)\]/', '[li]', $s );
 		$s = preg_replace ( '/\[\/\*:(.*?)\]/', '[/li]', $s );
@@ -253,6 +257,10 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 		$s = preg_replace ( '/\<!-- l(.*?) -->/', '', $s ); // local url
 		$s = preg_replace ( '/\<!-- ia(.*?) -->/', '', $s ); // attachment
 
+		$s = preg_replace ( '/\[email:(.*?)\]/', '[email]', $s );
+		$s = preg_replace ( '/\[email=([^:]*):(.*?)\]/', '[email=\\1]', $s );
+		$s = preg_replace ( '/\[\/email:(.*?)\]/', '[/email]', $s );
+		
 		// TODO: convert urls
 		$s = preg_replace ( '/\<a class=\"postlink\" href=\"(.*?)\">(.*?)<\/a>/', '[url=\\1]\\2[/url]', $s );
 		$s = preg_replace ( '/\<a class=\"postlink-local\" href=\"(.*?)\">(.*?)<\/a>/', '[url=\\1]\\2[/url]', $s );
@@ -260,11 +268,28 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 
 		$s = preg_replace ( '/\<a href=.*?mailto:.*?>/', '', $s );
 
-		$s = preg_replace ( '/\[url:(.*?)]/', '[url]', $s );
-		$s = preg_replace ( '/\[url=([^:]*):(.*?)]/', '[url]', $s );
-		$s = preg_replace ( '/\[\/url:(.*?)]/', '[/url]', $s );
-
+		$s = preg_replace ( '/\[url:(.*?)\]/', '[url]', $s );
+		// TODO does not support [url=http://example.com:abc123] yet
+		$s = preg_replace ( '/\[url=([^:]*):(.*?)\]/', '[url=\\1]', $s );
+		$s = preg_replace ( '/\[\/url:(.*?)\]/', '[/url]', $s );
+		
 		$s = preg_replace ( '/\<\/a>/', '', $s );
+		
+		$s = preg_replace ( '\[flash(.*?)\](.*?)\[\/flash(.*?)\]', '', $s );
+		
+		// snesfreaks specific
+		$s = preg_replace ( '/\[(s|strike):(.*?)\]/', '[strike]', $s );
+		$s = preg_replace ( '/\[\/(s|strike):(.*?)\]/', '[/strike]', $s );
+		
+		$s = preg_replace ( '/\[blink:(.*?)\]/', '', $s );
+		$s = preg_replace ( '/\[\/blink:(.*?)\]/', '', $s );
+		
+		$s = preg_replace ( '/\[spoiler:(.*?)\]/', '[spoiler]', $s );
+		$s = preg_replace ( '/\[\/spoiler:(.*?)\]/', '[/spoiler]', $s );
+		
+		// TODO with and without :...
+		$s = preg_replace ( '/\[youtube:(.*?)\]/', '[video type="youtube"]', $s );
+		$s = preg_replace ( '/\[\/youtube:(.*?)\]/', '[/video]', $s );
 	}
 
 	/**
