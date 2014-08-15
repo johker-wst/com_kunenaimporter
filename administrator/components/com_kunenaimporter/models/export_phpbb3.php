@@ -206,90 +206,143 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 	 * @param string $s String
 	 */
 	protected function parseBBCode(&$s) {
-		// TODO :(.*?) may or may not occur: \[url=(.+):(.+)\] (not finished yet!)
-		// TODO first remove :.* globally at the end of the tag to facilitate other regex?
 		$s = html_entity_decode ( $s );
 
-		$s = preg_replace ( '/\[b:(.*?)\]/', '[b]', $s );
-		$s = preg_replace ( '/\[\/b:(.*?)\]/', '[/b]', $s );
+		// [b]: bold font
+		$s = preg_replace ( '/\[b(:.*?)\]/', '[b]', $s );
+		$s = preg_replace ( '/\[\/b(:.*?)\]/', '[/b]', $s );
 
-		$s = preg_replace ( '/\[i:(.*?)\]/', '[i]', $s );
-		$s = preg_replace ( '/\[\/i:(.*?)\]/', '[/i]', $s );
+		// [i]: italic font
+		$s = preg_replace ( '/\[i(:.*?)\]/', '[i]', $s );
+		$s = preg_replace ( '/\[\/i(:.*?)\]/', '[/i]', $s );
 
-		$s = preg_replace ( '/\[u:(.*?)\]/', '[u]', $s );
-		$s = preg_replace ( '/\[\/u:(.*?)\]/', '[/u]', $s );
+		// [u]: underlined font
+		$s = preg_replace ( '/\[u(:.*?)\]/', '[u]', $s );
+		$s = preg_replace ( '/\[\/u(:.*?)\]/', '[/u]', $s );
 
-		$s = preg_replace ( '/\[quote:(.*?)\]/', '[quote]', $s );
-		$s = preg_replace ( '/\[quote="(.*?)"(:(.*?))?\]/', '[quote="\\1"]', $s );
-		$s = preg_replace ( '/\[\/quote:(.*?)\]/', '[/quote]', $s );
-
-		$s = preg_replace ( '/\[img:(.*?)\]/', '[img]', $s );
-		$s = preg_replace ( '/[\/img:(.*?)\]/', '[/img]', $s );
-
-		$s = preg_replace ( '/\[color=(.*?):(.*?)\]/', '[color=\\1]', $s );
-		$s = preg_replace ( '/\[\/color:(.*?)\]/', '[/color]', $s );
-
-		$s = preg_replace ( '/\[size=[1234][0-9]:(.*?)\]/', '[size=1]', $s );
-		$s = preg_replace ( '/\[size=[567][0-9]:(.*?)\]/', '[size=2]', $s );
-		$s = preg_replace ( '/\[size=(8|9|10|11|12)[0-9]:(.*?)\]/', '[size=3]', $s );
-		$s = preg_replace ( '/\[size=(13|14|15|16|17)[0-9]:(.*?)\]/', '[size=4]', $s );
-		$s = preg_replace ( '/\[size=(18|19|20|21|22)[0-9]:(.*?)\]/', '[size=5]', $s );
-		$s = preg_replace ( '/\[size=(2[3-9])[0-9]:(.*?)\]/', '[size=6]', $s );
-		$s = preg_replace ( '/\[\/size:(.*?)\]/', '[/size]', $s );
-
-		$s = preg_replace ( '/\[code:(.*?)\]/', '[code]', $s );
-		$s = preg_replace ( '/\[code=([a-z]+):(.*?)\]/', '[code type="\\1"]', $s );
-		$s = preg_replace ( '/\[\/code:(.*?)\]/', '[/code]', $s );
-
-		$s = preg_replace ( '/\[list(:(.*?))?\]/', '[list]', $s );
-		$s = preg_replace ( '/\[list=([a1]):(.*?)\]/', '[list=\\1]', $s );
-		$s = preg_replace ( '/\[\/list:u:(.*?)\]/', '[/list]', $s );
-		$s = preg_replace ( '/\[\/list:o:(.*?)\]/', '[/list]', $s );
-
-		$s = preg_replace ( '/\[\*:(.*?)\]/', '[li]', $s );
-		$s = preg_replace ( '/\[\/\*:(.*?)\]/', '[/li]', $s );
-
-		$s = preg_replace ( '/<!-- s(.*?) --><img src=\"{SMILIES_PATH}.*?\/><!-- s.*? -->/', ' \\1 ', $s );
-
-		$s = preg_replace ( '/\<!-- e(.*?) -->/', '', $s );
-		$s = preg_replace ( '/\<!-- w(.*?) -->/', '', $s );
-		$s = preg_replace ( '/\<!-- m(.*?) -->/', '', $s );
-		$s = preg_replace ( '/\<!-- l(.*?) -->/', '', $s ); // local url
-		$s = preg_replace ( '/\<!-- ia(.*?) -->/', '', $s ); // attachment
-
-		$s = preg_replace ( '/\[email:(.*?)\]/', '[email]', $s );
-		$s = preg_replace ( '/\[email=([^:]*):(.*?)\]/', '[email=\\1]', $s );
-		$s = preg_replace ( '/\[\/email:(.*?)\]/', '[/email]', $s );
+		// [quote], [quote=*]: (named) quotes
+		$s = preg_replace ( '/\[quote(:.*?)\]/', '[quote]', $s );
+		$s = preg_replace ( '/\[quote=["\']?([^"\']+?)["\']?(\s*):([^:]+?)\]/', '[quote="\\1"]', $s );
+		$s = preg_replace ( '/\[\/quote(:.*?)\]/', '[/quote]', $s );
 		
+		// [img]: images
+		$s = preg_replace ( '/\[img(:.*?)\]/', '[img]', $s );
+		$s = preg_replace ( '/[\/img(:.*?)\]/', '[/img]', $s );
+		
+		// [color=*]: font color
+		$s = preg_replace ( '/\[color=(.+?):([^:]+?)\]/', '[color=\\1]', $s );
+		$s = preg_replace ( '/\[\/color(:.*?)\]/', '[/color]', $s );
+		
+		/*
+		 * [size=*]: font size
+		 * Sizes range from 1 <= size <= 200. Map them to 1-6 using the
+		 * following map:
+		 *
+		 * 		phpbb		kunena
+		 *     1-39			1
+		 *     40-79		2
+		 *     80-119		3
+		 *     120-159		4
+		 *     160-179		5
+		 *     180-200		6
+		 */
+		$s = preg_replace ( '/\[size=[123]?[0-9](:.*?)\]/', '[size=1]', $s );
+		$s = preg_replace ( '/\[size=[4567][0-9](:.*?)\]/', '[size=2]', $s );
+		$s = preg_replace ( '/\[size=(8|9|10|11)[0-9](:.*?)\]/', '[size=3]', $s );
+		$s = preg_replace ( '/\[size=(12|13|14|15)[0-9](:.*?)\]/', '[size=4]', $s );
+		$s = preg_replace ( '/\[size=(16|17)[0-9](:.*?)\]/', '[size=5]', $s );
+		$s = preg_replace ( '/\[size=(((18|19)[0-9])|200)(:.*?)\]/', '[size=6]', $s );
+		$s = preg_replace ( '/\[\/size(:.*?)\]/', '[/size]', $s );
+
+		// [code], [code=*]: raw code with and without syntax highlighting
+		$s = preg_replace ( '/\[code(:.*?)\]/', '[code]', $s );
+		$s = preg_replace ( '/\[code=([a-z]+):([^:]+?)\]/', '[code type="\\1"]', $s );
+		$s = preg_replace ( '/\[\/code(:.*?)\]/', '[/code]', $s );
+
+		// [list], [list=*], [*], [/*]: lists (ordered, unordered), list elements
+		// default list
+		$s = preg_replace ( '/\[list(:.*?)\]/', '[list]', $s );
+		// roman
+		$s = preg_replace ( '/\[list=([iI])(:.*?)\]/', '[list=\\1]', $s );
+		// numeric
+		$s = preg_replace ( '/\[list=([0-9]+)(:.*?)\]/', '[list=1]', $s );
+		// lower alpha
+		$s = preg_replace ( '/\[list=([a-z])(:.*?)\]/', '[list=a]', $s );
+		// upper alpha
+		$s = preg_replace ( '/\[list=([A-Z])(:.*?)\]/', '[list=A]', $s );
+		// misc
+		$s = preg_replace ( '/\[list=(disc|circle|square)(:.*?)\]/', '[list=\\1]', $s );
+
+		$s = preg_replace ( '/\[\/list:u(:.*?)\]/', '[/list]', $s );
+		$s = preg_replace ( '/\[\/list:o(:.*?)\]/', '[/list]', $s );
+
+		// TODO [*] does not need to be closed (no [/*])
+		$s = preg_replace ( '/\[\*(:.*?)\]/', '[li]', $s );
+		$s = preg_replace ( '/\[\/\*(:.*?)\]/', '[/li]', $s );
+
+		// smileys
+		$s = preg_replace ( '/<!-- s(.*?) --\>\<img src=\"{SMILIES_PATH}.*?\/\>\<!-- s.*? --\>/', ' \\1 ', $s );
+
+		// misc
+		$s = preg_replace ( '/\<!-- e(.*?) --\>/', '', $s );
+		$s = preg_replace ( '/\<!-- w(.*?) --\>/', '', $s );
+		$s = preg_replace ( '/\<!-- m(.*?) --\>/', '', $s );
+		$s = preg_replace ( '/\<!-- l(.*?) --\>/', '', $s ); // local url
+		$s = preg_replace ( '/\<!-- ia(.*?) --\>/', '', $s ); // inline attachment
+
+		// [email], [email=*]: mailto link with optional text
+		$s = preg_replace ( '/\[email(:.*?)\]/', '[email]', $s );
+		$s = preg_replace ( '/\[email=(.+?):([^:]+?)\]/', '[email=\\1]', $s );
+		$s = preg_replace ( '/\[\/email(:.*?)\]/', '[/email]', $s );
+
+		// <a href="*">*</a>: HTML links with optional text
 		// TODO: convert urls
-		$s = preg_replace ( '/\<a class=\"postlink\" href=\"(.*?)\">(.*?)<\/a>/', '[url=\\1]\\2[/url]', $s );
-		$s = preg_replace ( '/\<a class=\"postlink-local\" href=\"(.*?)\">(.*?)<\/a>/', '[url=\\1]\\2[/url]', $s );
-		$s = preg_replace ( '/\<a href=\"(.*?)\">(.*?)<\/a>/', '[url=\\1]\\2[/url]', $s );
+		$s = preg_replace ( '/\<a class=\"postlink\" href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url=\\1]\\2[/url]', $s );
+		$s = preg_replace ( '/\<a class=\"postlink-local\" href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url=\\1]\\2[/url]', $s );
+		$s = preg_replace ( '/\<a href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url=\\1]\\2[/url]', $s );
 
-		$s = preg_replace ( '/\<a href=.*?mailto:.*?>/', '', $s );
+		$s = preg_replace ( '/\<a href=.*?mailto:.*?\>/', '', $s );
 
-		$s = preg_replace ( '/\[url:(.*?)\]/', '[url]', $s );
-		// TODO does not support [url=http://example.com:abc123] yet
-		$s = preg_replace ( '/\[url=([^:]*):(.*?)\]/', '[url=\\1]', $s );
-		$s = preg_replace ( '/\[\/url:(.*?)\]/', '[/url]', $s );
-		
-		$s = preg_replace ( '/\<\/a>/', '', $s );
-		
+		// [url], [url=*]: URL links with optional text
+		$s = preg_replace ( '/\[url(:.*?)\]/', '[url]', $s );
+		$s = preg_replace ( '/\[url=(.+?):([^:]+?)\]/', '[url=\\1]', $s );
+		$s = preg_replace ( '/\[\/url(:.*?)\]/', '[/url]', $s );
+
+		$s = preg_replace ( '/\<\/a\>/', '', $s );
+
+		// [flash]: flash videos
 		$s = preg_replace ( '\[flash(.*?)\](.*?)\[\/flash(.*?)\]', '', $s );
-		
+
 		// snesfreaks specific
-		$s = preg_replace ( '/\[(s|strike):(.*?)\]/', '[strike]', $s );
-		$s = preg_replace ( '/\[\/(s|strike):(.*?)\]/', '[/strike]', $s );
-		
-		$s = preg_replace ( '/\[blink:(.*?)\]/', '', $s );
-		$s = preg_replace ( '/\[\/blink:(.*?)\]/', '', $s );
-		
-		$s = preg_replace ( '/\[spoiler:(.*?)\]/', '[spoiler]', $s );
-		$s = preg_replace ( '/\[\/spoiler:(.*?)\]/', '[/spoiler]', $s );
-		
-		// TODO with and without :...
-		$s = preg_replace ( '/\[youtube:(.*?)\]/', '[video type="youtube"]', $s );
-		$s = preg_replace ( '/\[\/youtube:(.*?)\]/', '[/video]', $s );
+		$s = preg_replace ( '/\[(s|strike)(:.*?)\]/', '[strike]', $s );
+		$s = preg_replace ( '/\[\/(s|strike)(:.*?)\]/', '[/strike]', $s );
+
+		$s = preg_replace ( '/\[blink(:.*?)\]/', '', $s );
+		$s = preg_replace ( '/\[\/blink(:.*?)\]/', '', $s );
+
+		$s = preg_replace ( '/\[spoiler(:.*?)\]/', '[spoiler]', $s );
+		$s = preg_replace ( '/\[\/spoiler(:.*?)\]/', '[/spoiler]', $s );
+
+		// get youtube video id: http://stackoverflow.com/questions/3392993/php-regex-to-get-youtube-video-id
+		$s = preg_replace_callback ( '/\[youtube(:.*?)\](.*)\[\/youtube(:.*?)\]/', 
+				function($m) {
+					$parts = parse_url($m[2]);
+					if (isset($parts['query'])) {
+						parse_str($parts['query'], $qs);
+						if (isset($qs['v'])) {
+							$id = $qs['v'];
+						} else if($qs['vi']) {
+							$id = $qs['vi'];
+						}
+					}
+					if (isset($parts['path'])) {
+						$path = explode('/', trim($parts['path'], '/'));
+						$id = $path[count($path)-1];
+					}
+					
+					return '[video type="youtube"]' . $id . '[/video]';
+				}
+				, $s );
 	}
 
 	/**
