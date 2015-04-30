@@ -227,7 +227,7 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 		
 		// [img]: images
 		$s = preg_replace ( '/\[img(:.*?)\]/', '[img]', $s );
-		$s = preg_replace ( '/[\/img(:.*?)\]/', '[/img]', $s );
+		$s = preg_replace ( '/\[\/img(:.*?)\]/', '[/img]', $s );
 		
 		// [color=*]: font color
 		$s = preg_replace ( '/\[color=(.+?):([^:]+?)\]/', '[color=\\1]', $s );
@@ -276,7 +276,8 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 		$s = preg_replace ( '/\[\/list:u(:.*?)\]/', '[/list]', $s );
 		$s = preg_replace ( '/\[\/list:o(:.*?)\]/', '[/list]', $s );
 
-		// TODO [*] does not need to be closed (no [/*])
+		// Kunena seems to cope just fine with missing [/li], so we can thankfully omit inserting missing ones,
+		// which would require counting
 		$s = preg_replace ( '/\[\*(:.*?)\]/', '[li]', $s );
 		$s = preg_replace ( '/\[\/\*(:.*?)\]/', '[/li]', $s );
 
@@ -284,6 +285,7 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 		$s = preg_replace ( '/<!-- s(.*?) --\>\<img src=\"{SMILIES_PATH}.*?\/\>\<!-- s.*? --\>/', ' \\1 ', $s );
 
 		// misc
+		// TODO inline images should still show up where they were originally
 		$s = preg_replace ( '/\<!-- e(.*?) --\>/', '', $s );
 		$s = preg_replace ( '/\<!-- w(.*?) --\>/', '', $s );
 		$s = preg_replace ( '/\<!-- m(.*?) --\>/', '', $s );
@@ -292,37 +294,40 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 
 		// [email], [email=*]: mailto link with optional text
 		$s = preg_replace ( '/\[email(:.*?)\]/', '[email]', $s );
-		$s = preg_replace ( '/\[email=(.+?):([^:]+?)\]/', '[email=\\1]', $s );
+		$s = preg_replace ( '/\[email=(.+?):([^:]+?)\]/', '[email="\\1"]', $s );
 		$s = preg_replace ( '/\[\/email(:.*?)\]/', '[/email]', $s );
 
 		// <a href="*">*</a>: HTML links with optional text
-		// TODO: convert urls
-		$s = preg_replace ( '/\<a class=\"postlink\" href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url=\\1]\\2[/url]', $s );
-		$s = preg_replace ( '/\<a class=\"postlink-local\" href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url=\\1]\\2[/url]', $s );
-		$s = preg_replace ( '/\<a href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url=\\1]\\2[/url]', $s );
+		// TODO: convert urls (they are still in phpbb format, not kunena format)
+		$s = preg_replace ( '/\<a class=\"postlink\" href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url="\\1"]\\2[/url]', $s );
+		$s = preg_replace ( '/\<a class=\"postlink-local\" href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url="\\1"]\\2[/url]', $s );
+		$s = preg_replace ( '/\<a href=\"(.*?)\"\>(.*?)\<\/a\>/', '[url="\\1"]\\2[/url]', $s );
 
 		$s = preg_replace ( '/\<a href=.*?mailto:.*?\>/', '', $s );
 
-		// [url], [url=*]: URL links with optional text
-		$s = preg_replace ( '/\[url(:.*?)\]/', '[url]', $s );
-		$s = preg_replace ( '/\[url=(.+?):([^:]+?)\]/', '[url=\\1]', $s );
-		$s = preg_replace ( '/\[\/url(:.*?)\]/', '[/url]', $s );
-
 		$s = preg_replace ( '/\<\/a\>/', '', $s );
 
-		// [flash]: flash videos
-		$s = preg_replace ( '\[flash(.*?)\](.*?)\[\/flash(.*?)\]', '', $s );
+		// [url], [url=*]: URL links with optional text
+		$s = preg_replace ( '/\[url(:.*?)\]/', '[url]', $s );
+		$s = preg_replace ( '/\[url=(.+?):([^:]+?)\]/', '[url="\\1"]', $s );
+		$s = preg_replace ( '/\[\/url(:.*?)\]/', '[/url]', $s );
 
-		// snesfreaks specific
+		// [flash]: flash videos
+		$s = preg_replace ( '/\[flash(.*?)\](.*?)\[\/flash(.*?)\]/', '', $s );
+
+		// [s], [strike]: strikethrough font
 		$s = preg_replace ( '/\[(s|strike)(:.*?)\]/', '[strike]', $s );
 		$s = preg_replace ( '/\[\/(s|strike)(:.*?)\]/', '[/strike]', $s );
 
+		// [blink]: blinking font
 		$s = preg_replace ( '/\[blink(:.*?)\]/', '', $s );
 		$s = preg_replace ( '/\[\/blink(:.*?)\]/', '', $s );
 
+		// [spoiler]: spoiler (expandable section, default: collapsed)
 		$s = preg_replace ( '/\[spoiler(:.*?)\]/', '[spoiler]', $s );
 		$s = preg_replace ( '/\[\/spoiler(:.*?)\]/', '[/spoiler]', $s );
 
+		// [youtube]: youtube videos
 		// get youtube video id: http://stackoverflow.com/questions/3392993/php-regex-to-get-youtube-video-id
 		$s = preg_replace_callback ( '/\[youtube(:.*?)\](.*)\[\/youtube(:.*?)\]/', 
 				function($m) {
@@ -335,14 +340,14 @@ class KunenaimporterModelExport_phpBB3 extends KunenaimporterModelExport {
 							$id = $qs['vi'];
 						}
 					}
-					if (isset($parts['path'])) {
+					if (!isset($id) && isset($parts['path'])) {
 						$path = explode('/', trim($parts['path'], '/'));
 						$id = $path[count($path)-1];
 					}
 					
 					return '[video type="youtube"]' . $id . '[/video]';
 				}
-				, $s );
+			, $s);
 	}
 
 	/**
